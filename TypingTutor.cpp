@@ -1,4 +1,5 @@
 #include <iostream>
+#include <string>
 #include <random>
 #include <ctime>
 #include <cstring>
@@ -19,6 +20,8 @@ class RandomTextGenerator
 	const char* alphabets = "abcdefghijklmnopqrstuvwxyz";
 	const char* specialChars = " `~!@#$%^&*()-_=+[{]}\\|;:\"',<.>/?";
 	const char* digits = "0123456789";
+	char* userChars;
+	int userCharsLength;
 
 	int numOfAlphabets;
 	int numOfSpecialChars;
@@ -31,11 +34,35 @@ public:
 		numOfAlphabets = strlen(alphabets);
 		numOfSpecialChars = strlen(specialChars);
 		numOfDigits = strlen(digits);
+		userChars = nullptr;
+		userCharsLength = 0;
 		generator.seed(seeder());
+	}
+	~RandomTextGenerator() {
+		if (userChars != nullptr){
+			delete[] userChars;
+		}
 	}
 	inline int RandomInRange(int min, int max) {
 		distribution.param(std::uniform_int_distribution<int>::param_type(min, max-1));
 		return distribution(generator);
+	}
+	void ReadUserChars()
+	{
+		//read characters into a temp string
+		std::string str;
+		std::getline(std::cin, str);
+		//delete previous userchars
+		if (userChars != nullptr){
+			delete[] userChars;
+			userChars = nullptr;
+		}
+		//allocate userchars and copy from temp string
+		userCharsLength = str.size();
+		userChars = new char[userCharsLength + 1];
+		const char* pc = str.c_str();
+		int i = 0;
+		while ((userChars[i] = pc[i++]) != '\0');
 	}
 	void GenText(char* buffer, int bufferLength, int selectionBits) {
 		bool AreAlphabetsRequired = (selectionBits & AlphabetsBit) ? true : false;
@@ -93,11 +120,13 @@ public:
 			else if (!AreAlphabetsRequired && AreSpecialCharsRequired && !AreDigitsRequired) {
 				buffer[i] = specialChars[RandomInRange(0, numOfSpecialChars)];
 			}
-			else{
-				if (RandomInRange(0, 2) == 0)
-					buffer[i] = alphabets[RandomInRange(0, numOfAlphabets)];
-				else
-					buffer[i] = digits[RandomInRange(0, numOfDigits)];
+			else 
+			{
+				//if (RandomInRange(0, 2) == 0)
+				//	buffer[i] = alphabets[RandomInRange(0, numOfAlphabets)];
+				//else
+				//	buffer[i] = digits[RandomInRange(0, numOfDigits)];
+				buffer[i] = userChars[RandomInRange(0,userCharsLength)];
 			}
 			if (i > 0 && buffer[i - 1] == ' ' && isalpha(buffer[i]) && RandomInRange(0, 6) == 0)
 				buffer[i] = toupper(buffer[i]);
@@ -147,6 +176,12 @@ void TypingTutor::MainLoop()
 		(std::cin.get(ch)).get();
 		if (ch == 'y' || ch == 'Y')
 			selectionBits |= DigitsBit;
+
+		if ((selectionBits & AlphabetsBit) == 0 && (selectionBits & SpecialCharactersBit) == 0 && (selectionBits & DigitsBit) == 0) {
+			std::cout << "Enter the characters you want to practice." << std::endl;
+			rtg.ReadUserChars();
+		}
+			
 
 		numOfCharsTyped = 0;
 		errorsOccured = 0;
