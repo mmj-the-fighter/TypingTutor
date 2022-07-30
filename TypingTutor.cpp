@@ -22,6 +22,9 @@ class RandomTextGenerator
 	const char* digits = "0123456789";
 	char* userChars;
 	int userCharsLength;
+	bool randomSpace;
+	bool randomCaps;
+	bool randomText;
 
 	int numOfAlphabets;
 	int numOfSpecialChars;
@@ -35,6 +38,9 @@ public:
 		numOfSpecialChars = strlen(specialChars);
 		numOfDigits = strlen(digits);
 		userChars = nullptr;
+		randomCaps = true;
+		randomSpace = true;
+		randomText = true;
 		userCharsLength = 0;
 		generator.seed(seeder());
 	}
@@ -64,6 +70,13 @@ public:
 		int i = 0;
 		while ((userChars[i] = pc[i++]) != '\0');
 	}
+	void SetMode(bool _randomCaps, bool _randomSpace, bool _randomText)
+	{
+		randomCaps = _randomCaps;
+		randomSpace = _randomSpace;
+		randomText = _randomText;
+	}
+
 	void GenText(char* buffer, int bufferLength, int selectionBits) {
 		bool AreAlphabetsRequired = (selectionBits & AlphabetsBit) ? true : false;
 		bool AreSpecialCharsRequired = (selectionBits & SpecialCharactersBit) ? true : false;
@@ -71,10 +84,10 @@ public:
 		bufferLength = 5 + RandomInRange(0, bufferLength - 5);
 		int choice;
 		int lastSpaceIndex = -1;
-		int i = 0;
+		int i = 0, k = 0;
 		while (i < bufferLength - 1)
 		{
-			if (i - lastSpaceIndex > 3) {
+			if (randomSpace && i - lastSpaceIndex > 3) {
 				if (RandomInRange(0, 4) == 0){
 					buffer[i] = ' ';
 					lastSpaceIndex = i;
@@ -126,11 +139,14 @@ public:
 				//	buffer[i] = alphabets[RandomInRange(0, numOfAlphabets)];
 				//else
 				//	buffer[i] = digits[RandomInRange(0, numOfDigits)];
-				buffer[i] = userChars[RandomInRange(0,userCharsLength)];
+				if (randomText)
+					buffer[i] = userChars[RandomInRange(0,userCharsLength)];
+				else 
+					buffer[i] = userChars[k%userCharsLength];
 			}
-			if (i > 0 && buffer[i - 1] == ' ' && isalpha(buffer[i]) && RandomInRange(0, 6) == 0)
+			if (randomCaps && i > 0 && buffer[i - 1] == ' ' && isalpha(buffer[i]) && RandomInRange(0, 6) == 0)
 				buffer[i] = toupper(buffer[i]);
-			++i;
+			++i; ++k;
 		}
 		buffer[bufferLength - 1] = '\0';
 	}
@@ -162,24 +178,33 @@ void TypingTutor::MainLoop()
 		(std::cin >> practiceDuration).get();
 
 		selectionBits = 0;
-		std::cout << "Do you want to practice alphabets(y/n): ";
+		std::cout << "Do you want to practice alphabets? (y/n): ";
 		(std::cin.get(ch)).get();
 		if (ch == 'y' || ch == 'Y')
 			selectionBits |= AlphabetsBit;
 
-		std::cout << "Do you want to practice special characters(y/n): ";
+		std::cout << "Do you want to practice special characters? (y/n): ";
 		(std::cin.get(ch)).get();
 		if (ch == 'y' || ch == 'Y')
 			selectionBits |= SpecialCharactersBit;
 
-		std::cout << "Do you want to practice digits(y/n): ";
+		std::cout << "Do you want to practice digits? (y/n): ";
 		(std::cin.get(ch)).get();
 		if (ch == 'y' || ch == 'Y')
 			selectionBits |= DigitsBit;
 
 		if ((selectionBits & AlphabetsBit) == 0 && (selectionBits & SpecialCharactersBit) == 0 && (selectionBits & DigitsBit) == 0) {
-			std::cout << "Enter the characters you want to practice." << std::endl;
+			std::cout << "Enter the characters you want to practice:" << std::endl;
 			rtg.ReadUserChars();
+			std::cout << "Do you want to randomize this practice? (y/n): ";
+			(std::cin.get(ch)).get();
+			if (ch == 'y' || ch == 'Y')
+				rtg.SetMode(false, false, true);
+			else
+				rtg.SetMode(false, false, false);
+		}
+		else{
+			rtg.SetMode(true, true, true);
 		}
 			
 
@@ -213,12 +238,12 @@ void TypingTutor::MainLoop()
 		charsPerSecond = numOfCharsTyped / timeElapsed;
 		wordsPerMinute = charsPerSecond * 60.0 / 5.0;
 
-		std::cout << "Accuracy(%) " << accuracy << std::endl
+		std::cout << "Accuracy(%): " << accuracy << std::endl
 			<< "Speed(CPS): " << charsPerSecond << std::endl
 			<< "Speed(WPM): " << wordsPerMinute << std::endl;
 
 		std::cout << "\nTest finished\n";
-		std::cout << "Do you want to take another test? y/n :";
+		std::cout << "Do you want to take another test? (y/n) :";
 		c[0] = std::cin.get();
 		c[1] = std::cin.get();
 		if (c[0] == 'n' || c[0] == 'N' || c[1] == 'n' || c[1] == 'N')
