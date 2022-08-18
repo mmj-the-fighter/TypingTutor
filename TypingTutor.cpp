@@ -5,8 +5,8 @@
 #include <ctime>
 #include <cstring>
 #include <cstdlib>
-#include <cstddef>
 #include<limits>
+
 #define MAXCHARSPERLINE 80
 
 enum {
@@ -21,12 +21,14 @@ private:
 	char *text;
 	int textLength;
 	bool textEnded;
+	std::string lastFilename;
 public:
 	TextFileLoader()
 	{
 		text = nullptr;
 		textLength = 0;
 		textEnded = false;
+		lastFilename = "";
 	}
 
 	~TextFileLoader() {
@@ -37,22 +39,31 @@ public:
 
 	bool LoadTextFromFile(std::string filename)
 	{
-		std::ifstream in(filename);
-		if (!in.is_open())
+		if (filename.compare("") == 0) {
 			return false;
-		std::string str((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
-		//delete previous text
-		if (text != nullptr){
-			delete[] text;
-			text = nullptr;
 		}
-		//allocate userchars and copy from temp string
-		textLength = str.size();
-		text = new char[textLength + 1];
-		const char* pc = str.c_str();
-		int i = 0;
-		while ((text[i] = pc[i++]) != '\0');
 
+		if (filename != lastFilename) {
+			std::ifstream in(filename);
+			if (!in.is_open()) {
+				return false;
+			}
+			lastFilename = filename;
+			std::string str((std::istreambuf_iterator<char>(in)), 
+				std::istreambuf_iterator<char>());
+			//delete previous text
+			if (text != nullptr){
+				delete[] text;
+				text = nullptr;
+			}
+			//allocate userchars and copy from temp string
+			textLength = str.size();
+			text = new char[textLength + 1];
+			const char* pc = str.c_str();
+			int i = 0;
+			while ((text[i] = pc[i++]) != '\0');
+			
+		}
 		textEnded = false;
 		return true;
 	}
@@ -89,7 +100,6 @@ public:
 			buffer[j] = text[i];
 			++i; ++j;
 		}
-		//std::cout << "buffer : " << buffer << std::endl;
 	}
 
 };
@@ -240,84 +250,97 @@ public:
 class TypingTutor
 {
 public:
+	void ReadConfigurationFromUser();
 	void MainLoop();
 private:
 	RandomTextGenerator rtg;	char c[2];
 	TextFileLoader tfl;
+	bool fPracticeFileText;
+	bool fPracticeFileTextWithTimeLimit;
+	double practiceDuration;
+	int selectionBits;
 };
+
+void TypingTutor::ReadConfigurationFromUser()
+{
+	char ch;
+	std::string filename;
+	filename = "";
+	std::cout << "Enter filename: " << std::endl;
+	std::getline(std::cin, filename);
+	if (tfl.LoadTextFromFile(filename)) {
+		fPracticeFileText = true;
+		std::cout << "Do you want time limit? (y/n): ";
+		(std::cin.get(ch)).get();
+		if (ch == 'y' || ch == 'Y')
+		{
+			fPracticeFileTextWithTimeLimit = true;
+			std::cout << "Enter intended practice duration in seconds: ";
+			(std::cin >> practiceDuration).get();
+		}
+		else
+		{
+			fPracticeFileTextWithTimeLimit = false;
+		}
+	}
+	else
+		fPracticeFileText = false;
+
+	if (!fPracticeFileText)
+	{
+		std::cout << "Enter intended practice duration in seconds: ";
+		(std::cin >> practiceDuration).get();
+		selectionBits = 0;
+		std::cout << "Do you want to practice alphabets? (y/n): ";
+		(std::cin.get(ch)).get();
+		if (ch == 'y' || ch == 'Y')
+			selectionBits |= AlphabetsBit;
+
+		std::cout << "Do you want to practice special characters? (y/n): ";
+		(std::cin.get(ch)).get();
+		if (ch == 'y' || ch == 'Y')
+			selectionBits |= SpecialCharactersBit;
+
+		std::cout << "Do you want to practice digits? (y/n): ";
+		(std::cin.get(ch)).get();
+		if (ch == 'y' || ch == 'Y')
+			selectionBits |= DigitsBit;
+
+		if ((selectionBits & AlphabetsBit) == 0 && 
+			(selectionBits & SpecialCharactersBit) == 0 && 
+			(selectionBits & DigitsBit) == 0) {
+			std::cout << "Enter the characters you want to practice:" << std::endl;
+			rtg.ReadUserChars();
+			std::cout << "Do you want to randomize this practice? (y/n): ";
+			(std::cin.get(ch)).get();
+			if (ch == 'y' || ch == 'Y')
+				rtg.SetMode(false, false, true);
+			else
+				rtg.SetMode(false, false, false);
+		}
+		else{
+			rtg.SetMode(true, true, true);
+		}
+	}
+
+}
 
 void TypingTutor::MainLoop()
 {
 	std::string str;
-	char ch, lineBuffer[MAXCHARSPERLINE+1];
+	char ch, lineBuffer[MAXCHARSPERLINE + 1];
 	unsigned int linebufferLength;
 	time_t startTime, endTime;
-	double timeElapsed, practiceDuration, charsPerSecond, wordsPerMinute, accuracy;
+	double timeElapsed, charsPerSecond, wordsPerMinute, accuracy;
 	int numOfCharsTyped, errorsOccured;
-	int selectionBits;
-	bool practiceFileText = false;
-	bool practiceFileTextWithTimeLimit = false;
 	bool continueLoading = false;
+	bool continueWithCurConfig = false;
 
-	std::cout << "Welcome to random text typing tutor" << std::endl;
+	std::cout << "Welcome to typing tutor" << std::endl;
 	while (true)
 	{
-		std::string filename;
-		filename = "";
-		std::cout << "Enter filename: " << std::endl;
-		std::getline(std::cin, filename);
-		//std::cin.ignore(256, '\n');
-		if (tfl.LoadTextFromFile(filename)) {
-			practiceFileText = true;
-			std::cout << "Do you want time limit? (y/n): ";
-			(std::cin.get(ch)).get();
-			if (ch == 'y' || ch == 'Y')
-			{
-				practiceFileTextWithTimeLimit = true;
-				std::cout << "Enter intended practice duration in seconds: ";
-				(std::cin >> practiceDuration).get();
-			}
-			else
-			{
-				practiceFileTextWithTimeLimit = false;
-			}
-		}
-		else
-			practiceFileText = false;
-
-		if (!practiceFileText)
-		{
-			std::cout << "Enter intended practice duration in seconds: ";
-			(std::cin >> practiceDuration).get();
-			selectionBits = 0;
-			std::cout << "Do you want to practice alphabets? (y/n): ";
-			(std::cin.get(ch)).get();
-			if (ch == 'y' || ch == 'Y')
-				selectionBits |= AlphabetsBit;
-
-			std::cout << "Do you want to practice special characters? (y/n): ";
-			(std::cin.get(ch)).get();
-			if (ch == 'y' || ch == 'Y')
-				selectionBits |= SpecialCharactersBit;
-
-			std::cout << "Do you want to practice digits? (y/n): ";
-			(std::cin.get(ch)).get();
-			if (ch == 'y' || ch == 'Y')
-				selectionBits |= DigitsBit;
-
-			if ((selectionBits & AlphabetsBit) == 0 && (selectionBits & SpecialCharactersBit) == 0 && (selectionBits & DigitsBit) == 0) {
-				std::cout << "Enter the characters you want to practice:" << std::endl;
-				rtg.ReadUserChars();
-				std::cout << "Do you want to randomize this practice? (y/n): ";
-				(std::cin.get(ch)).get();
-				if (ch == 'y' || ch == 'Y')
-					rtg.SetMode(false, false, true);
-				else
-					rtg.SetMode(false, false, false);
-			}
-			else{
-				rtg.SetMode(true, true, true);
-			}
+		if (!continueWithCurConfig) {
+			ReadConfigurationFromUser();
 		}
 		numOfCharsTyped = 0;
 		errorsOccured = 0;
@@ -325,7 +348,7 @@ void TypingTutor::MainLoop()
 		int SSM = 0;
 		do
 		{
-			if (practiceFileText)
+			if (fPracticeFileText)
 				tfl.CopyText(lineBuffer, MAXCHARSPERLINE, &SSM);
 			else
 				rtg.GenText(lineBuffer, MAXCHARSPERLINE, selectionBits);
@@ -338,7 +361,7 @@ void TypingTutor::MainLoop()
 			for (unsigned int i = 0; i < linebufferLength; i++)
 			{
 				if (i < str.size()) {
-					if(lineBuffer[i] != str[i])
+					if (lineBuffer[i] != str[i])
 						++errorsOccured;
 					++numOfCharsTyped;
 				}
@@ -352,14 +375,14 @@ void TypingTutor::MainLoop()
 				errorsOccured += excess;
 				numOfCharsTyped += excess;
 			}
-	
+
 			//note time
 			endTime = time(NULL);
 			timeElapsed = difftime(endTime, startTime);
 
 			//decide for loading next section
-			if (practiceFileText) {
-				if (practiceFileTextWithTimeLimit)
+			if (fPracticeFileText) {
+				if (fPracticeFileTextWithTimeLimit)
 					continueLoading = (timeElapsed <= practiceDuration) ? true : false;
 				else
 					continueLoading = !tfl.isTextEnded();
@@ -375,7 +398,7 @@ void TypingTutor::MainLoop()
 		charsPerSecond = numOfCharsTyped / timeElapsed;
 		wordsPerMinute = charsPerSecond * 60.0 / 5.0;
 
-		std::cout 
+		std::cout
 			<< "Time Elapsed: " << timeElapsed << std::endl
 			<< "Errors: " << errorsOccured << std::endl
 			<< "Accuracy(%): " << accuracy << std::endl
@@ -386,10 +409,21 @@ void TypingTutor::MainLoop()
 		std::cout << "Do you want to take another test? (y/n) :";
 		c[0] = std::cin.get();
 		c[1] = std::cin.get();
-		if (c[0] == 'n' || c[0] == 'N' || c[1] == 'n' || c[1] == 'N')
+		if (c[0] == 'n' || c[0] == 'N' || c[1] == 'n' || c[1] == 'N') {
 			break;
-		else
+		}
+		else {
+			std::cout << "Do you want to continue with the current configuration? (y/n) :";
+			c[0] = std::cin.get();
+			c[1] = std::cin.get();
+			if (c[0] == 'n' || c[0] == 'N' || c[1] == 'n' || c[1] == 'N') {
+				continueWithCurConfig = false;
+			}
+			else {
+				continueWithCurConfig = true;
+			}
 			continue;
+		}
 	}
 
 }
@@ -400,5 +434,3 @@ int main()
 	tt.MainLoop();
 	return 0;
 }
-
-
