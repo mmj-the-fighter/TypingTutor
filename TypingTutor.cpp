@@ -1,3 +1,12 @@
+/*
+
+Command to compile:
+g++ -std=c++11 TypingTutor.cpp -o TypingTutor
+
+Command to run:
+./TypingTutor
+
+*/
 #include <iostream>
 #include <fstream>
 #include <string>
@@ -5,6 +14,7 @@
 #include <ctime>
 #include <cstring>
 #include <cstdlib>
+#include <cctype> 
 #include<limits>
 
 #define MAXCHARSPERLINE 80
@@ -49,7 +59,7 @@ public:
 				return false;
 			}
 			lastFilename = filename;
-			std::string str((std::istreambuf_iterator<char>(in)), 
+			std::string str((std::istreambuf_iterator<char>(in)),
 				std::istreambuf_iterator<char>());
 			//delete previous text
 			if (text != nullptr){
@@ -62,7 +72,7 @@ public:
 			const char* pc = str.c_str();
 			int i = 0;
 			while ((text[i] = pc[i++]) != '\0');
-			
+
 		}
 		textEnded = false;
 		return true;
@@ -306,8 +316,8 @@ void TypingTutor::ReadConfigurationFromUser()
 		if (ch == 'y' || ch == 'Y')
 			selectionBits |= DigitsBit;
 
-		if ((selectionBits & AlphabetsBit) == 0 && 
-			(selectionBits & SpecialCharactersBit) == 0 && 
+		if ((selectionBits & AlphabetsBit) == 0 &&
+			(selectionBits & SpecialCharactersBit) == 0 &&
 			(selectionBits & DigitsBit) == 0) {
 			std::cout << "Enter the characters you want to practice:" << std::endl;
 			rtg.ReadUserChars();
@@ -407,15 +417,13 @@ void TypingTutor::MainLoop()
 
 		std::cout << "\nTest finished\n";
 		std::cout << "Do you want to take another test? (y/n) :";
-		c[0] = std::cin.get();
-		c[1] = std::cin.get();
+		std::cin.getline(c, sizeof(c));
 		if (c[0] == 'n' || c[0] == 'N' || c[1] == 'n' || c[1] == 'N') {
 			break;
 		}
 		else {
 			std::cout << "Do you want to continue with the current configuration? (y/n) :";
-			c[0] = std::cin.get();
-			c[1] = std::cin.get();
+			std::cin.getline(c, sizeof(c));
 			if (c[0] == 'n' || c[0] == 'N' || c[1] == 'n' || c[1] == 'N') {
 				continueWithCurConfig = false;
 			}
