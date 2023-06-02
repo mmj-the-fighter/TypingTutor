@@ -14,7 +14,7 @@ Command to run:
 #include <ctime>
 #include <cstring>
 #include <cstdlib>
-#include <cctype> 
+//#include <cctype> 
 #include<limits>
 
 #define MAXCHARSPERLINE 80
@@ -80,6 +80,10 @@ public:
 
 	bool isTextEnded(){
 		return textEnded;
+	}
+
+	void Reset() {
+		textEnded = false;
 	}
 
 	void CopyText(char* buffer, int maxBufferLength, int *SSM)
@@ -429,6 +433,10 @@ void TypingTutor::MainLoop()
 			}
 			else {
 				continueWithCurConfig = true;
+			}
+			if (fPracticeFileText || fPracticeFileTextWithTimeLimit) {
+				tfl.Reset();
+
 			}
 			continue;
 		}
