@@ -71,7 +71,9 @@ public:
 			text = new char[textLength + 1];
 			const char* pc = str.c_str();
 			int i = 0;
-			while ((text[i] = pc[i++]) != '\0');
+			while ((text[i] = pc[i]) != '\0'){
+				++i;
+			}
 
 		}
 		textEnded = false;
