@@ -14,7 +14,6 @@ Command to run:
 #include <ctime>
 #include <cstring>
 #include <cstdlib>
-//#include <cctype> 
 #include<limits>
 
 #define MAXCHARSPERLINE 80
@@ -178,7 +177,9 @@ public:
 		userChars = new char[userCharsLength + 1];
 		const char* pc = str.c_str();
 		int i = 0;
-		while ((userChars[i] = pc[i++]) != '\0');
+		while ((userChars[i] = pc[i]) != '\0') {
+			++i;
+		}
 	}
 
 	void SetMode(bool _randomCaps, bool _randomSpace, bool _randomText)
